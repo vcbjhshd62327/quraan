@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>القرآن الكريم</title>
+<title>المصحف الشريف</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Amiri&display=swap" rel="stylesheet">
 
@@ -10,227 +10,103 @@
 body {
   margin: 0;
   font-family: "Amiri", serif;
-  transition: 0.3s;
   overflow: hidden;
+  background: #0d0d0d;
+  color: white;
 }
 
-body.dark { background:#0d0d0d; color:#f5f5f5; }
-body.light { background:#f5f5f5; color:#111; }
-
-.quran-frame {
-  border: 10px solid gold;
-  border-radius: 20px;
-  margin: 10px;
-  padding: 10px;
-  height: 95vh;
-  box-sizing: border-box;
+/* السلايدر الأفقي */
+.slider {
   display: flex;
-  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
 }
 
-/* الهيدر */
+/* كل صفحة */
+.page {
+  min-width: 100vw;
+  height: 100vh;
+  scroll-snap-align: start;
+  box-sizing: border-box;
+  padding: 20px;
+  overflow-y: auto;
+  border: 5px solid gold;
+}
+
+/* رأس الصفحة */
 .header {
   text-align: center;
   border-bottom: 2px solid gold;
-  padding-bottom: 5px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
 }
 
-.surah-name { font-size: 24px; font-weight: bold; }
-
-/* التحكم */
-.controls {
-  display: flex;
-  justify-content: space-between;
-  margin: 10px 0;
-}
-
-select, button {
-  padding: 6px;
-  border-radius: 8px;
-  border: none;
-}
-
-/* البسملة */
-.basmala {
-  text-align: center;
-  color: gold;
-  margin: 10px 0;
-  font-size: 20px;
-}
-
-/* الصفحات */
-.page-container {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-/* الصفحة الواحدة */
-.page {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-  direction: rtl;
-  overflow-y: auto;
-  transition: 0.4s;
-}
-
+/* الآيات */
 .ayah {
   font-size: 22px;
   line-height: 2.2;
+  display: block;
 }
 
-.ayah-number {
-  color: gold;
-}
-
-/* الفوتر */
-.footer {
+.basmala {
   text-align: center;
-  border-top: 2px solid gold;
-  padding-top: 5px;
-}
-
-/* أزرار التنقل */
-.nav {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 5px;
+  color: gold;
+  font-size: 20px;
+  margin: 10px 0;
 }
 </style>
 
 </head>
 
-<body class="dark">
+<body>
 
-<div class="quran-frame">
-
-  <div class="header">
-    <div class="surah-name" id="surahName"></div>
-  </div>
-
-  <div class="controls">
-    <select id="surahSelect"></select>
-    <button onclick="toggleMode()">🌙/☀️</button>
-  </div>
-
-  <div class="basmala">بسم الله الرحمن الرحيم</div>
-
-  <div class="page-container" id="pageContainer"></div>
-
-  <div class="nav">
-    <button onclick="prevPage()">⬅ السابق</button>
-    <button onclick="nextPage()">التالي ➡</button>
-  </div>
-
-  <div class="footer" id="footer"></div>
-
-</div>
+<div class="slider" id="slider"></div>
 
 <script>
 
-const surahs = [
-"الفاتحة","البقرة","آل عمران","النساء","المائدة","الأنعام","الأعراف","الأنفال","التوبة","يونس",
-"هود","يوسف","الرعد","إبراهيم","الحجر","النحل","الإسراء","الكهف","مريم","طه",
-"الأنبياء","الحج","المؤمنون","النور","الفرقان","الشعراء","النمل","القصص","العنكبوت","الروم",
-"لقمان","السجدة","الأحزاب","سبأ","فاطر","يس","الصافات","ص","الزمر","غافر",
-"فصلت","الشورى","الزخرف","الدخان","الجاثية","الأحقاف","محمد","الفتح","الحجرات","ق",
-"الذاريات","الطور","النجم","القمر","الرحمن","الواقعة","الحديد","المجادلة","الحشر","الممتحنة",
-"الصف","الجمعة","المنافقون","التغابن","الطلاق","التحريم","الملك","القلم","الحاقة","المعارج",
-"نوح","الجن","المزمل","المدثر","القيامة","الإنسان","المرسلات","النبأ","النازعات","عبس",
-"التكوير","الإنفطار","المطففين","الإنشقاق","البروج","الطارق","الأعلى","الغاشية","الفجر","البلد",
-"الشمس","الليل","الضحى","الشرح","التين","العلق","القدر","البينة","الزلزلة","العاديات",
-"القارعة","التكاثر","العصر","الهمزة","الفيل","قريش","الماعون","الكوثر","الكافرون","النصر",
-"المسد","الإخلاص","الفلق","الناس"
-];
+let pagesData = {};
 
-let select = document.getElementById("surahSelect");
-let currentPage = 0;
-let pages = [];
-let ayahs = [];
+// تحميل سورة كاملة (نجمع كل القرآن)
+fetch("https://api.alquran.cloud/v1/quran/quran-uthmani")
+.then(res => res.json())
+.then(data => {
 
-surahs.forEach((s,i)=>{
-  let opt=document.createElement("option");
-  opt.value=i+1;
-  opt.text=(i+1)+" - "+s;
-  select.appendChild(opt);
+  let ayahs = data.data.ayahs;
+
+  // نجمع حسب رقم الصفحة الحقيقي
+  ayahs.forEach(a => {
+    let p = a.page;
+    if(!pagesData[p]) pagesData[p] = [];
+    pagesData[p].push(a);
+  });
+
+  buildPages();
 });
 
-let lastSurah = localStorage.getItem("lastSurah") || 1;
-select.value = lastSurah;
-
-loadSurah(lastSurah);
-
-select.onchange = ()=>{
-  loadSurah(select.value);
-  localStorage.setItem("lastSurah",select.value);
-};
-
-function loadSurah(num){
-  fetch(`https://api.alquran.cloud/v1/surah/${num}`)
-  .then(r=>r.json())
-  .then(d=>{
-    ayahs = d.data.ayahs;
-    document.getElementById("surahName").innerText = "سورة " + d.data.name;
-
-    buildPages();
-    currentPage = 0;
-    showPage(0);
-  });
-}
-
-/* تقسيم الآيات لصفحات (10 آيات لكل صفحة) */
 function buildPages(){
-  pages = [];
-  let size = 10;
+  let slider = document.getElementById("slider");
 
-  for(let i=0;i<ayahs.length;i+=size){
-    pages.push(ayahs.slice(i,i+size));
-  }
-}
+  Object.keys(pagesData).sort((a,b)=>a-b).forEach(pageNum => {
 
-/* عرض صفحة */
-function showPage(i){
-  let container = document.getElementById("pageContainer");
-  container.innerHTML = "";
+    let page = document.createElement("div");
+    page.className = "page";
 
-  let pageDiv = document.createElement("div");
-  pageDiv.className = "page";
+    let ayahs = pagesData[pageNum];
 
-  pages[i].forEach(a=>{
-    pageDiv.innerHTML += `<div class="ayah">${a.text} <span class="ayah-number">(${a.numberInSurah})</span></div>`;
+    page.innerHTML = `
+      <div class="header">صفحة ${pageNum}</div>
+      <div class="basmala">بسم الله الرحمن الرحيم</div>
+    `;
+
+    ayahs.forEach(a => {
+      page.innerHTML += `<div class="ayah">${a.text}</div>`;
+    });
+
+    slider.appendChild(page);
   });
-
-  container.appendChild(pageDiv);
-
-  document.getElementById("footer").innerText =
-    `صفحة ${i+1} من ${pages.length} | الجزء ${pages[i][0].juz}`;
 }
-
-/* تنقل */
-function nextPage(){
-  if(currentPage < pages.length-1){
-    currentPage++;
-    showPage(currentPage);
-  }
-}
-
-function prevPage(){
-  if(currentPage > 0){
-    currentPage--;
-    showPage(currentPage);
-  }
-}
-
-/* Dark/Light */
-function toggleMode(){
-  document.body.classList.toggle("light");
-  document.body.classList.toggle("dark");
-}
-
-document.body.className = localStorage.getItem("mode") || "dark";
 
 </script>
 
